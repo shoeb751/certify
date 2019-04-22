@@ -1,0 +1,27 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+    - "7000:80"
+    volumes:
+    - "./nginx/conf.d:/etc/nginx/conf.d"
+    - "./nginx/html:/var/www/html"
+    - "./lua:/etc/nginx/lua"
+  db:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    volumes:
+      # the ./ is required or it will consider it a named volume
+      - "./sql:/docker-entrypoint-initdb.d"
+    environment:
+      MYSQL_ROOT_PASSWORD: strongpass
+      MYSQL_USER: yui_u
+      MYSQL_PASSWORD: yui_p
+      MYSQL_DATABASE: yui
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "7001:8080"
