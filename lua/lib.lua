@@ -283,7 +283,10 @@ _M.create_cert_chain = function (id,db,chain)
         ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
         return
         end
-        if #res == 0 or res[1]["issuer"] == subject or #chain > 10 then
+        if #res == 0 or #chain > 10 then
+            return chain
+        elseif res[1]["issuer"] == subject then
+            table.insert(chain,res[1])
             return chain
         else
             table.insert(chain,res[1])

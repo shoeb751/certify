@@ -13,7 +13,7 @@ The folowing goals are directly to be implemented in this project
     - Individual certificates
     - certificate chains
   * Keys
-    - Individual keys
+    - ~~Individual keys~~ (Downloading individual keys serves no purpose. We will always need a key associated with a cert to be used for deployment)
     - Keys pertaining to specific cert
   * CSRs (To be implemented)
 3. Interface for creation of CSR from a specific key (To be implemented)
@@ -58,7 +58,7 @@ Certify API:
   - args
     - type (optional)
       - cert (default)
-      - key
+      - key (Will download key pertainig to the given cert id)
       - chain
     - id (required)
 ```

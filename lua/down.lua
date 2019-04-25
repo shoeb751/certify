@@ -19,6 +19,34 @@ if type == "chain" then
     data = data .. v.raw .. "\n"
   end
   out.data = data
+elseif type == "ic" then
+  local chain = lib.create_cert_chain(id,db)
+  out.name = chain[1]["name"]:gsub('*','star'):gsub(' ','_')
+  local data = ""
+  for i, v in ipairs(chain) do
+    if i ~= 1 then
+    -- this is inefficient if chains are very long as this will require a lot of GC to create new
+    -- strings and delete old versions as strings in lua are immutable
+      data = data .. v.raw .. "\n"
+    end
+  end
+  out.data = data
+elseif type == "key" then
+  local query = "SELECT  c.name as name, k.raw as raw \
+                  from ssl_certs c \
+                INNER JOIN ssl_keys k \
+                ON c.modulus_sha1 = k.modulus_sha1 \
+                WHERE c.id = ".. id ..";"
+  local res, err, errcode, sqlstate = db:query(query)
+  if not res then
+  ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
+  return
+  end
+  if #res == 0 then
+    lib.message_e("ERROR","Resource not found with id: " .. id)
+  end
+  out.name = res[1]["name"]:gsub('*','star'):gsub(' ','_')
+  out.data = res[1]["raw"]
 else
   local query = "SELECT name as name, raw FROM " .. c.mysql.table[type] .. " where id = " .. id .. ";"
   local res, err, errcode, sqlstate = db:query(query)
