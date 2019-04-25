@@ -36,5 +36,4 @@ function api_to_table (url,elements,id) {
     tableCreate(Http.responseText,elems,id)
   }
 }
-api_to_table('/api/list',["id","name","fingerprint","expires"],"cert-container")
-api_to_table('/api/list?type=key',["id","name","modulus_sha1"],"key-container")
+api_to_table('/api/list',["id","name","fingerprint","expires","key_exists"],"cert-container")
