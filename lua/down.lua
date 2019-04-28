@@ -71,5 +71,8 @@ elseif type == "key" then
 elseif type == "chain" then
   ngx.header['Content-Type'] = 'application/x-x509-ca-cert'
   ngx.header['Content-Disposition'] = 'attachment; filename="' .. out.name .. '_chain.crt"'
+elseif type == "ic" then
+  ngx.header['Content-Type'] = 'application/x-x509-ca-cert'
+  ngx.header['Content-Disposition'] = 'attachment; filename="' .. out.name .. '_ic_chain.crt"'
 end
 ngx.print(out.data)
