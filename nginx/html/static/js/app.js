@@ -1,5 +1,14 @@
 var global_t = {"Certificate":"cert","Key":"key","Intermediate Cert":"ic","Full Chain":"chain"}
 
+var annon = () => {
+  var fl = document.getElementById('fil')
+  var fn = document.getElementById('fn')
+  fl.onchange=(event) => {
+    console.log(event)
+    var fileName = event.target.value;
+    fn.textContent=fileName;
+  }
+}
 
 function create_link(id){
   var id_elem = id + 1
@@ -65,6 +74,40 @@ function api_to_table (url,elements,id) {
     var elems = elements
     tableCreate(Http.responseText,elems,id)
   }
+}
+
+function modalchange(text){
+  var modal = document.getElementById('modal-data')
+  if (modal.classList.contains("is-active")) {
+    modal.classList.remove("is-active")
+  }
+  else {
+    var mtext = document.getElementById("modal-text")
+    var a = document.createElement('p');
+    console.log(text)
+    var linkText = document.createTextNode(text);
+    a.appendChild(linkText)
+    mtext.replaceChild(a, mtext.childNodes[0])
+    modal.classList.add("is-active")
+  }
+}
+
+function uploadFile (file) {
+  var formData = new FormData();
+  formData.append('file', file);
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/up', true);
+  xhr.onreadystatechange = function () {
+    if(xhr.readyState === 4 && xhr.status === 200) {
+      modalchange(xhr.responseText);
+    }
+  };
+  xhr.send(file);
+}
+
+function jsupload (obj) {
+  var file=obj.files[0]
+  uploadFile(file)
 }
 
 api_to_table("/api/list",["id","name","fingerprint","expires","key_exists"],"cert-container")

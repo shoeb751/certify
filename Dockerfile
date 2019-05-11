@@ -11,5 +11,5 @@ RUN apk update && apk add --no-cache gcc make unzip libc-dev && \
 FROM openresty/openresty:alpine
 COPY --from=build /opt/build/sockproc-master/sockproc /bin/
 ADD ./misc/start.sh /bin/start.sh
-RUN apk update && apk add --no-cache openssl coreutils
+RUN apk update && apk add --no-cache openssl coreutils file
 CMD ["/bin/start.sh"]

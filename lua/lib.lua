@@ -34,7 +34,6 @@ _M.message_e = function (level, message)
     ngx.say(level .. ": " .. message)
     ngx.exit(200)
 end
-
 -- End debug funtionality
 
 -- Setup common libs that can be used at multiple places:
@@ -75,19 +74,50 @@ end
 
 -- extract certs, keys, csrs from text
 _M.extract = function (message)
-    if message:find("CERTIFICATE") then
-        local certs = {_M.get_cert_details(message)}
+    local fil = _M.file_from_data (message)
+
+    local cmd = "file -b -m /etc/nginx/lua/config/magic_privatekey -m /usr/share/misc/magic " .. fil
+    local out, err = _M.run_shell(cmd)
+    if not out then
+        _M.message_e("ERROR","Invalid Key: " .. err)
+    end
+
+    if out:find("certificate") then
+        local certs = {_M.get_cert_details(message,fil)}
         for i,v in ipairs(certs) do
             _M.add_to_db("cert",v)
         end
-    elseif message:find("KEY") then
-        local keys = {_M.get_key_details(message)}
+    elseif out:find("key") then
+        local keys = {_M.get_key_details(message,fil)}
         for i, v in ipairs(keys) do
             _M.add_to_db("key",v)
         end
+    elseif out:find("Zip") then
+        -- Here we are not going to be adding to the DB
+        -- Using the generic add_to_db function
+        -- Instead, we will upload the cert using multiple
+        -- Curl calls to myself from inside the docker
+        --_M.message_e("ERROR", "Zip processing not implemented")
+        _M.process_zip(fil)
     else
         _M.message_e("ERROR", "No Cert or key found")
     end
+end
+
+_M.process_zip = function (f_name)
+    local cmd = [[
+        tmp_dir=$(mktemp -d); \
+        unzip -q -d $tmp_dir %s && \
+        find $tmp_dir -type f | \
+        xargs -i sh -c "curl -s http://127.0.0.1/api/up --data-binary @{}" && \
+        rm -rf $tmp_dir
+    ]]
+    cmd = string.format(cmd,f_name)
+    local out, err = _M.run_shell(cmd)
+    if not out then
+        _M.message_e("ERROR","Could not process zip: " .. err)
+    end
+    _M.message_e("INFO",out)
 end
 
 _M.run_shell = function (cmd)
@@ -111,8 +141,7 @@ _M.sanitize = function (obj)
 end
 
 
-_M.get_key_details = function (data)
-    local fil = _M.file_from_data (data)
+_M.get_key_details = function (data,fil)
     local key = {}
     key.raw = data
     local cmd = "openssl rsa -check -in " .. fil .. " -noout -text | grep -E 'Private|RSA'"
@@ -142,8 +171,7 @@ _M.get_key_details = function (data)
     return _M.sanitize(key)
 end
 
-_M.get_cert_details = function (crt)
-    local fil = _M.file_from_data (crt)
+_M.get_cert_details = function (crt, fil)
     local cert = {}
     cert.raw = crt
     local cmd = "openssl x509 -noout -subject -issuer -fingerprint -enddate -in " .. fil

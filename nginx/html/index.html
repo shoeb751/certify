@@ -17,12 +17,39 @@
     </div>
     <!-- navbar brand, navbar menu... -->
 </nav>
+<div class="modal" id="modal-data">
+  <div class="modal-background"></div>
+  <div class="modal-content">
+<div class="box" id="modal-text" style="margin-top: 10;">
+</div>
+
+    <!-- Any other Bulma elements you want -->
+  </div>
+  <button class="modal-close is-large" aria-label="close" onclick=modalchange()></button>
+</div>
 <script src="static/js/app.js"></script>
+<hr class="is-invisible" style="margin-bottom: 1.5;">
+<div class="container" id="uploads-container">
+  <p class="title">Upload Files</p>
+  <div class="file">
+    <label class="file-label">
+      <input class="file-input" type="file" name="resume" onchange="jsupload(this)">
+      <span class="file-cta">
+        <span class="file-icon">
+          <i class="fas fa-upload"></i>
+        </span>
+        <span class="file-label">
+          Choose a file…
+        </span>
+      </span>
+    </label>
+  </div>
+</div>
 <hr class="is-invisible" style="margin-bottom: 1.5;">
 <div class="container" id="cert-container" style="margin-top: 10;">
   <p class="title">Certificates</p>
 </div>
-<hr class="hr" style="margin-bottom: 1.5;">
+<hr class="is-invisible" style="margin-bottom: 1.5;">
 <div class="container" id="csr-container">
   <p class="title">CSRs</p>
 </div>
