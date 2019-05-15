@@ -14,12 +14,15 @@ _M.debug.dump_vars = function (var)
             ngx.say(":")
             ngx.say(_M.debug.dump_vars(value))
         end
+    elseif type(var) == "nil"  then
+        ngx.say(var)
     else
         ngx.say(type(var) .. "Not being used for debug")
     end
 end
 
 local d = _M.debug.dump_vars
+_M.d = d
 _M.de = function (arg)
     d(arg)
     ngx.exit(200)
@@ -214,6 +217,33 @@ _M.file_from_data = function (data)
     return fil
 end
 
+_M.db_query = function (db_instance, query)
+    local res, err, errcode, sqlstate = db_instance:query(query)
+    if not res then
+        ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
+        return
+    end
+    return res
+end
+
+_M.get_id_from_name = function (name,exit)
+    -- this is one or two additional DB calls
+    -- so that I do not have to refactor functions
+    -- to account for the name
+    local db, err = _M.db()
+    if not db then de(err) end
+    local type = "cert"
+    local query = "SELECT id, name FROM " .. c.mysql.table[type] .. " where name = '" .. name .. "';"
+    local res = _M.db_query(db,query)
+    -- exit means it is tying wildcard match
+    if exit then return res[1] and res[1]["id"] end
+    -- if no results for specific match, try wildcard match
+    if #res == 0 then
+        return _M.get_id_from_name("*." .. name:gsub('^%w+%.',''),true)
+    else
+        return res[1] and res[1]["id"]
+    end
+end
 
 _M.add_to_db = function (type,obj)
     -- its job is to check if things are already in the DB

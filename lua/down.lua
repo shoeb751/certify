@@ -4,8 +4,9 @@ local lib = require("lib")
 local c = require("config")
 
 local type = ngx.var.arg_type or "cert"
-local id = ngx.var.arg_id
-if not id then lib.message_e("ERROR","No id specified") end
+local dn = ngx.var.arg_dn
+local id = ngx.var.arg_id or dn and lib.get_id_from_name(dn)
+if not id then lib.message_e("ERROR","Requested Cert does not exist") end
 local db = lib.db()
 local out = {}
 
