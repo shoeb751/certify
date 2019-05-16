@@ -11,7 +11,7 @@ var annon = () => {
 }
 
 function create_link(id){
-  var id_elem = id + 1
+  var id_elem = id
   var div = document.createElement('div')
   for (var key in global_t) {
     var val = global_t[key]
