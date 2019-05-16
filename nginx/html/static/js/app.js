@@ -55,7 +55,7 @@ function tableCreate(dat,elems,id) {
     }
     // Custom Logic for downloads
         var td = document.createElement('td');
-        var LinkText = create_link(i)
+        var LinkText = create_link(tbl_dat[i][elems[0]])
         td.appendChild(LinkText)
         tr.appendChild(td)
 
