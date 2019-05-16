@@ -75,9 +75,18 @@ _M.get_body = function ()
     return body
 end
 
+_M.check_for_multi = function (message)
+    return select(2, message:gsub("BEGIN", ""))
+end
 -- extract certs, keys, csrs from text
 _M.extract = function (message)
+    local multi = _M.check_for_multi(message)
     local fil = _M.file_from_data (message)
+
+    -- if multi cert, there will be more than 1 BEGIN
+    if multi > 1 then
+        _M.process_multi(fil)
+    end
 
     local cmd = "file -b -m /etc/nginx/lua/config/magic_privatekey -m /usr/share/misc/magic " .. fil
     local out, err = _M.run_shell(cmd)
@@ -119,6 +128,37 @@ _M.process_zip = function (f_name)
     local out, err = _M.run_shell(cmd)
     if not out then
         _M.message_e("ERROR","Could not process zip: " .. err)
+    end
+    _M.message_e("INFO",out)
+end
+
+_M.process_multi = function (f_name)
+    local cmd = [[
+        tmp_dir=$(mktemp -d); \
+        cp {FNAME} $tmp_dir && \
+        cd $tmp_dir && \
+        awk ' \
+        BEGIN{ n=0; cert=0; key=0; \
+              if ( ARGC < 2 ) { print "Use a proper file name"; exit 1 } \
+            } \
+        /-----BEGIN PRIVATE KEY-----/      { key=1; cert=0 } \
+        /-----BEGIN RSA PRIVATE KEY-----/  { key=1; cert=0 } \
+        /-----BEGIN CERTIFICATE-----/      { cert=1; key=0 } \
+        split_after == 1                   { n++; split_after=0 } \
+        /-----END CERTIFICATE-----/        { split_after=1 } \
+        /-----END PRIVATE KEY-----/        { split_after=1 } \
+        /-----END RSA PRIVATE KEY-----/    { split_after=1 } \
+        key == 1                       { print > FILENAME "-" n ".key" } \
+        cert == 1                      { print > FILENAME "-" n ".crt" }' $(basename {FNAME}) && \
+        rm {FNAME} $(basename {FNAME}) && \
+        find $tmp_dir -type f | \
+        xargs -i sh -c "curl -s http://127.0.0.1/api/up --data-binary @{}" && \
+        rm -r $tmp_dir
+    ]]
+    cmd = cmd:gsub("{FNAME}",f_name)
+    local out, err = _M.run_shell(cmd)
+    if not out then
+        _M.message_e("ERROR","Could not process multicert: " .. err)
     end
     _M.message_e("INFO",out)
 end

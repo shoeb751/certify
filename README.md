@@ -11,8 +11,8 @@ The folowing goals are directly to be implemented in this project
 2. Upload, List and download:
   * Certificates
     - Individual certificates
-    - certificate chains (Download is available, Upload is to be implemented)
-    - Full certificate chain (Download is available, Upload is to be implemented)
+    - certificate chains
+    - Full certificate chain
   * Keys
     - ~~Individual keys~~ (Downloading individual keys serves no purpose. We will always need a key associated with a cert to be used for deployment, uploading keys is implemented)
     - Keys pertaining to specific certificate
