@@ -273,7 +273,7 @@ _M.get_id_from_name = function (name,exit)
     local db, err = _M.db()
     if not db then de(err) end
     local type = "cert"
-    local query = "SELECT id, name FROM " .. c.mysql.table[type] .. " where name = '" .. name .. "';"
+    local query = "SELECT id, name FROM " .. c.mysql.table[type] .. " where name = '" .. name .. "' ORDER BY expires DESC LIMIT 1;"
     local res = _M.db_query(db,query)
     -- exit means it is tying wildcard match
     if exit then return res[1] and res[1]["id"] end
