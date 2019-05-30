@@ -1,5 +1,10 @@
 var global_t = {"Certificate":"cert","Key":"key","Intermediate Cert":"ic","Full Chain":"chain"}
 
+function dn_search(){
+  var domain = document.getElementById("dn-search").value
+  api_to_table("/api/list?concise=true&name=" + domain ,["Domain","Expires On","Issuer","Days"],"cert-container")
+}
+
 var annon = () => {
   var fl = document.getElementById('fil')
   var fn = document.getElementById('fn')
@@ -16,12 +21,13 @@ function create_link(id){
   for (var key in global_t) {
     var val = global_t[key]
     var a = document.createElement('a');
+    a.className = "button";
     var linkText = document.createTextNode(key);
     a.appendChild(linkText);
     a.title = "Download " + key;
     a.href = "/api/down?id=" + id_elem + "&type=" + val;
     div.appendChild(a)
-    div.appendChild(document.createElement('br'))
+    //div.appendChild(document.createElement('br'))
   }
   return div
 }
@@ -34,6 +40,7 @@ function tableCreate(dat,elems,id) {
   tbl.setAttribute('border', '1');
   tbl.setAttribute('class','table is-bordered is-striped is-narrow is-hoverable is-fullwidth')
   tbl.id = "cert-table"
+  k=document.getElementById("cert-table");if (k) { k.parentNode.removeChild(k); console.log("exists")} else { console.log("not there")}
   var tbdy = document.createElement('tbody');
   var tr = document.createElement('tr');
     for (var j = 0; j < elems.length; j++) {
@@ -55,7 +62,7 @@ function tableCreate(dat,elems,id) {
     }
     // Custom Logic for downloads
         var td = document.createElement('td');
-        var LinkText = create_link(tbl_dat[i][elems[0]])
+        var LinkText = create_link(tbl_dat[i]["id"])
         td.appendChild(LinkText)
         tr.appendChild(td)
 
@@ -110,6 +117,7 @@ function jsupload (obj) {
   uploadFile(file)
 }
 
-api_to_table("/api/list",["id","name","fingerprint","expires","key_exists"],"cert-container")
+
+api_to_table("/api/list?concise=true",["Domain","Expires On","Issuer","Days"],"cert-container")
 // I have modified the api_to_table function to add download link
 // So, it is no more a generic function to create tables from API

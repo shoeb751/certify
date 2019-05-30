@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <title>Certify</title>
   <link rel="stylesheet" type="text/css" href="static/css/bulma.min.css">
+  <link rel="stylesheet" type="text/css" href="static/css/font-awesome.min.css">
 </head>
 
 <body class="layout-documentation page-columns">
+
   <nav class="navbar is-black is-transparent is-vcentered is-spaced">
     <div class="container">
       <div class="navbar-brand">
@@ -38,7 +40,7 @@
       <div class="column is-two-fifths">
         <div class="columns box">
           <div class="column">
-            <p class="title is-5">Upload Files</p>
+            <p class="title is-5">Upload Files (cert, key, zip, cert chain)</p>
           </div>
           <div class="column">
             <div class="file">
@@ -46,7 +48,7 @@
                 <input class="file-input" type="file" name="resume" onchange="jsupload(this)">
                 <span class="file-cta">
                   <span class="file-icon">
-                    <i class="fas fa-upload"></i>
+                    <i class="fa fa-upload"></i>
                   </span>
                   <span class="file-label">
                     Choose a file…
@@ -77,6 +79,11 @@
     <hr class="is-invisible" style="margin-bottom: 1.5;">
     <div class="container" id="cert-container" style="margin-top: 10;">
       <p class="title">Certificates</p>
+            <div class="field has-addons is-one-fifth">
+              <input class="input" type="text" id="dn-search" placeholder="Domain [a-zA-Z.-]+">
+              <a class="button" onclick=dn_search()>Search</a>
+
+            </div>
     </div>
     <hr class="is-invisible" style="margin-bottom: 1.5;">
     <div class="container" id="csr-container">

@@ -20,6 +20,29 @@ if ngx.var.arg_issuer then
 else
   query = query:gsub("{ISSUER}","")
 end
+
+if ngx.var.arg_concise then
+  -- Here id is required as we need to create download link
+  -- even though we do not directly display id on interface
+  query = [[
+    SELECT  c.id, c.name as Domain,
+        DATEDIFF(c.expires,CURDATE()) as 'Days',
+        c.expires as 'Expires On',
+        SUBSTRING_INDEX(c.issuer, '/', -1) as Issuer
+    FROM ssl_certs c
+    INNER JOIN ssl_keys k
+        ON c.modulus_sha1 = k.modulus_sha1
+        {NAME_COND}
+        ORDER BY c.expires
+  ]]
+end
+if ngx.var.arg_name and ngx.var.arg_name ~= "" then
+  local name = ngx.var.arg_name
+  local cond = "WHERE c.name LIKE '%%" .. name .. "%%'"
+  query = query:gsub("{NAME_COND}",cond)
+else
+  query = query:gsub("{NAME_COND}", "")
+end
 local res, err, errcode, sqlstate = db:query(query)
 if not res then
 ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
