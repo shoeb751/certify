@@ -5,7 +5,7 @@ local _M = {}
 -- Adding Debug functionality
 _M.debug = {}
 
-_M.debug.dump_vars = function (var)
+function _M.debug.dump_vars (var)
     if type(var) == "string" or type(var) == "number" then
         ngx.say(var)
     elseif type(var) == "table" then
@@ -23,7 +23,7 @@ end
 
 local d = _M.debug.dump_vars
 _M.d = d
-_M.de = function (arg)
+function _M.de (arg)
     d(arg)
     ngx.exit(200)
 end
@@ -31,8 +31,11 @@ end
 local de = _M.de
 
 -- print  message and exit
-_M.message_e = function (level, message)
+function _M.message_e (level, message)
     local level = level or "INFO"
+    if not message then
+        message = debug.traceback()
+    end
     local message = message or "No message supplied"
     ngx.say(level .. ": " .. message)
     ngx.exit(200)
@@ -44,7 +47,7 @@ end
 
 _M.shell = require("shell")
 
-_M.db = function ()
+function _M.db ()
     local mysql = require("mysql")
     local db, err = mysql:new()
     if not db then
@@ -66,45 +69,55 @@ end
 -- End setup of common libs
 
 
-_M.get_body = function ()
+function _M.get_body ()
     ngx.req.read_body()
     local body = ngx.req.get_body_data()
+    if body == nil then
+        local tmp_file = ngx.req.get_body_file()
+        local f = assert(io.open(tmp_file, "rb"))
+        body = f:read("*all")
+        f:close()
+    end 
     if body == nil or body == "" then
         _M.message_e("WARN","Request Body Empty :(")
     end
     return body
 end
 
-_M.check_for_multi = function (message)
+function _M.check_for_multi (message)
     return select(2, message:gsub("BEGIN", ""))
 end
 -- extract certs, keys, csrs from text
-_M.extract = function (message)
+function _M.extract (message)
     local multi = _M.check_for_multi(message)
     local fil = _M.file_from_data (message)
 
     -- if multi cert, there will be more than 1 BEGIN
     if multi > 1 then
+        _M.d("multi detected")
         _M.process_multi(fil)
     end
-
-    local cmd = "file -b -m /etc/nginx/lua/config/magic_privatekey -m /usr/share/misc/magic " .. fil
+    -- remove empty lines and then find type of file
+    local cmd = "sed -i '/^$/d' " .. fil .. "&& file -b -m /etc/nginx/lua/config/magic_privatekey -m /usr/share/misc/magic " .. fil
     local out, err = _M.run_shell(cmd)
     if not out then
         _M.message_e("ERROR","Invalid Key: " .. err)
     end
 
     if out:find("certificate") then
+        _M.d("cert detected")
         local certs = {_M.get_cert_details(message,fil)}
         for i,v in ipairs(certs) do
             _M.add_to_db("cert",v)
         end
     elseif out:find("key") then
+        _M.d("key detected")
         local keys = {_M.get_key_details(message,fil)}
         for i, v in ipairs(keys) do
             _M.add_to_db("key",v)
         end
     elseif out:find("Zip") then
+        _M.d("zip detected")
         -- Here we are not going to be adding to the DB
         -- Using the generic add_to_db function
         -- Instead, we will upload the cert using multiple
@@ -112,11 +125,14 @@ _M.extract = function (message)
         --_M.message_e("ERROR", "Zip processing not implemented")
         _M.process_zip(fil)
     else
+        _M.d("===")
+        _M.d(message)
+        _M.d("===")
         _M.message_e("ERROR", "No Cert or key found")
     end
 end
 
-_M.process_zip = function (f_name)
+function _M.process_zip (f_name)
     local cmd = [[
         tmp_dir=$(mktemp -d); \
         unzip -q -d $tmp_dir %s && \
@@ -132,7 +148,11 @@ _M.process_zip = function (f_name)
     _M.message_e("INFO",out)
 end
 
-_M.process_multi = function (f_name)
+function _M.process_multi (f_name)
+    -- Three things are being done here
+    -- 1) Split multi cert into a single one
+    -- 2) Remove empty lines from file
+    -- 3) Upload each cert individually
     local cmd = [[
         tmp_dir=$(mktemp -d); \
         cp {FNAME} $tmp_dir && \
@@ -152,10 +172,21 @@ _M.process_multi = function (f_name)
         cert == 1                      { print > FILENAME "-" n ".crt" }' $(basename {FNAME}) && \
         rm {FNAME} $(basename {FNAME}) && \
         find $tmp_dir -type f | \
-        xargs -i sh -c "curl -s http://127.0.0.1/api/up --data-binary @{}" && \
+        xargs -i sh -c "sed -i '/^$/d' {}" && \
+        find $tmp_dir -type f | \
+        xargs -i sh -c "curl -s 'http://127.0.0.1/api/up{AUTH}' --data-binary @{}" && \
         rm -r $tmp_dir
     ]]
-    cmd = cmd:gsub("{FNAME}",f_name)
+
+    -- Adding logic to pass the auth to multi cert requests
+    local auth = ngx.var.arg_auth
+    if auth then
+        auth = "?&auth=" .. auth
+    else
+        auth = ""
+    end
+    cmd = cmd:gsub("{FNAME}",f_name):gsub("{AUTH}",auth)
+    _M.d(cmd)
     local out, err = _M.run_shell(cmd)
     if not out then
         _M.message_e("ERROR","Could not process multicert: " .. err)
@@ -163,7 +194,7 @@ _M.process_multi = function (f_name)
     _M.message_e("INFO",out)
 end
 
-_M.run_shell = function (cmd)
+function _M.run_shell (cmd)
     local status, out, err = _M.shell.execute(cmd, c.shell.args)
     if not err then
         return out
@@ -172,7 +203,7 @@ _M.run_shell = function (cmd)
     end
 end
 
-_M.sanitize = function (obj)
+function _M.sanitize (obj)
     n_obj = {}
     if type(obj) == "string" then
         return obj:gsub("%s+$",""):gsub("^%s+",""):gsub("'","''")
@@ -184,7 +215,7 @@ _M.sanitize = function (obj)
 end
 
 
-_M.get_key_details = function (data,fil)
+function _M.get_key_details (data,fil)
     local key = {}
     key.raw = data
     local cmd = "openssl rsa -check -in " .. fil .. " -noout -text | grep -E 'Private|RSA'"
@@ -214,7 +245,7 @@ _M.get_key_details = function (data,fil)
     return _M.sanitize(key)
 end
 
-_M.get_cert_details = function (crt, fil)
+function _M.get_cert_details (crt, fil)
     local cert = {}
     cert.raw = crt
     local cmd = "openssl x509 -noout -subject -issuer -fingerprint -enddate -in " .. fil
@@ -244,7 +275,7 @@ _M.get_cert_details = function (crt, fil)
     return _M.sanitize(cert)
 end
 
-_M.file_from_data = function (data)
+function _M.file_from_data (data)
     local fil = "/tmp/luatmp/" .. ngx.time() .. ".dat"
     local f,err = io.open(fil,"w")
     f:write(data)
@@ -257,7 +288,7 @@ _M.file_from_data = function (data)
     return fil
 end
 
-_M.db_query = function (db_instance, query)
+function _M.db_query (db_instance, query)
     local res, err, errcode, sqlstate = db_instance:query(query)
     if not res then
         ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
@@ -266,7 +297,7 @@ _M.db_query = function (db_instance, query)
     return res
 end
 
-_M.get_id_from_name = function (name,exit)
+function _M.get_id_from_name (name,exit)
     -- this is one or two additional DB calls
     -- so that I do not have to refactor functions
     -- to account for the name
@@ -285,7 +316,28 @@ _M.get_id_from_name = function (name,exit)
     end
 end
 
-_M.add_to_db = function (type,obj)
+function _M.root_cert_override(v)
+    if v.subject == v.issuer then
+        -- root cert detected
+        -- check for auth
+        if ngx.var.arg_auth == c.security.root_auth then
+            return true
+        else
+            return nil, "auth to upload root cert failed"
+        end
+    else
+        return true
+    end
+end
+
+function _M.add_to_db (type,obj)
+    -- Adding acheck to uplad a root cert
+    if type == 'cert' then
+        local ok,err = _M.root_cert_override(obj)
+        if not ok then
+            _M.message_e("ERROR",err)
+        end
+    end
     -- its job is to check if things are already in the DB
     -- if not , add, if there, return with error
     -- returns out, nil or nil, err
@@ -356,8 +408,10 @@ _M.add_to_db = function (type,obj)
 
 end
 
-_M.create_cert_chain = function (id,db,chain)
+function _M.create_cert_chain (id,db,chain)
     -- Chain will contain the number of entries
+    -- and should not be used while calling the function
+    -- it is only for the purpose of recusrion
     if not chain then
         local chain = {}
         query = "SELECT name, issuer, raw from ssl_certs WHERE id = " .. id ..";"
@@ -382,13 +436,242 @@ _M.create_cert_chain = function (id,db,chain)
         return
         end
         if #res == 0 or #chain > 10 then
-            return chain
+            -- We could not go till root cert, or 
+            -- ended up in cycles, so, we return a false
+            return chain, false
         elseif res[1]["issuer"] == subject then
-            table.insert(chain,res[1])
-            return chain
+            -- Not adding the root cert to the chain as
+            -- there is no need for it there. To add it there
+            -- we will only need t uncomment the next line
+            -- also this will break the recursion
+            -- table.insert(chain,res[1])
+            -- returning the true means we have gone till
+            -- root cert, will be helpful when we decide on checking
+            -- cert usefulness
+            return chain, true
         else
+            -- keep going on till you go to either no res
+            -- or a root cert
             table.insert(chain,res[1])
             return _M.create_cert_chain(id,db,chain)
+        end
+    end
+end
+-- clean up related functions
+function _M.check_db_setup(db)
+    -- check if table is created and has entries
+   local q_test_if_table_exists_and_create = [[
+CREATE table IF NOT EXISTS cert_status (
+	id INT,
+    cert_valid BOOL,
+    last_change timestamp,
+    PRIMARY KEY (id)
+);
+   ]]
+   local res,err = _M.db_query(db,q_test_if_table_exists_and_create)
+   if not res then
+    _M.message_e("ERROR", err)
+   end
+
+   local q_create_cert_archive_if_not_exist = [[
+    CREATE table IF NOT EXISTS ssl_certs_archive (
+        id INT AUTO_INCREMENT,
+        name text,
+        last_change timestamp,
+        expires timestamp,
+        subject text,
+        issuer text,
+        raw text,
+        fingerprint text,
+        modulus_sha1 text,
+        PRIMARY KEY (id)
+    );
+   ]]
+   
+   local res,err = _M.db_query(db,q_create_cert_archive_if_not_exist)
+   if not res then
+    _M.message_e("ERROR", err)
+   end
+
+   local q_create_key_archive_if_not_exist = [[
+    CREATE table IF NOT EXISTS ssl_keys_archive (
+        id INT AUTO_INCREMENT,
+        name text,
+        last_change timestamp,
+        raw text,
+        modulus_sha1 text,
+        PRIMARY KEY (id)
+    );
+   ]]
+   local res,err = _M.db_query(db,q_create_key_archive_if_not_exist)
+   if not res then
+    _M.message_e("ERROR", err)
+   end
+
+   return true
+end
+
+function _M.get_certs_to_be_validated(db)
+    -- return a table containing the certs in array format
+    -- (can directly give mysql query output)
+    -- This is only for certs that need to be tested and those
+    -- are the certs that have a key present
+    local q_get_certs_to_be_validated = [[
+        SELECT  c.id from ssl_certs c
+        INNER JOIN ssl_keys k ON c.modulus_sha1 = k.modulus_sha1
+        LEFT JOIN cert_status cs ON c.id = cs.id where cs.cert_valid = 0 or cs.cert_valid is NULL;
+    ]]
+    local res,err = _M.db_query(db,q_get_certs_to_be_validated)
+    if not res then
+     _M.message_e("ERROR", err)
+    end
+    return res
+end
+
+function _M.update_cert_status_in_db(id,val,db)
+    -- we just need to say that the cert has complete chain or not
+    local q_change_cert_valid_status_template = [[
+        INSERT INTO cert_status
+        (id, cert_valid, last_change)
+        VALUES
+        ({id}, {val}, '{time}')
+    ON DUPLICATE KEY UPDATE
+    cert_valid = VALUES(cert_valid),
+    last_change = VALUES(last_change);
+    ]]
+    if val then
+        local cmd = 'date -u +"%Y-%m-%d %H:%M:%S"'
+        local status, out, err = _M.shell.execute(cmd, c.shell.args)
+        local now = out
+        local q_change_cert_valid_status = q_change_cert_valid_status_template:gsub("{id}",id):gsub("{val}",1):gsub("{time}",now)
+        local res,err = _M.db_query(db,q_change_cert_valid_status)
+        if not res then
+            _M.message_e("ERROR", err)
+        end
+    end   
+end
+
+function _M.get_duplicate_certs(db)
+    -- find duplicates and return list that can be archived
+    local q_find_duplicate_certs = [[
+        SELECT  c.id , c.name, IFNULL(cs.cert_valid,0) as cert_valid, UNIX_TIMESTAMP(c.expires) as expires from ssl_certs c
+        INNER JOIN ssl_keys k ON c.modulus_sha1 = k.modulus_sha1
+        LEFT JOIN cert_status cs on c.id = cs.id WHERE c.name IN (SELECT name
+      FROM ssl_certs
+      GROUP BY name
+      HAVING COUNT(*) > 1)        
+    ]]
+    local res,err = _M.db_query(db,q_find_duplicate_certs)
+    if not res then
+        _M.message_e("ERROR", err)
+    end
+    return res
+end
+
+function _M.process_duplicate(cert)
+    -- table to hold valid certs
+    local v_certs = {}
+    -- table to hold to archive certs
+    local a_certs = {}
+    for i,v in pairs(cert) do
+        -- reducing table access complications and setting default where necessary
+        local name = v["name"]
+        local cert_valid = v["cert_valid"]
+        local id = v["id"]
+        local expires = v["expires"]
+        _M.d(name)
+        _M.d(cert_valid)
+        _M.d(id)
+        _M.d(expires)
+        if not v_certs[name] then
+            _M.d("c1")
+            v_certs[name]={}
+            v_certs[name][cert_valid]={}
+            v_certs[name][cert_valid]["id"]=id
+            v_certs[name][cert_valid]["ts"]=expires
+        elseif v_certs[name] and not v_certs[name][cert_valid] then
+            _M.d("c2")
+            v_certs[name][cert_valid]={}
+            v_certs[name][cert_valid]["id"]=id
+            v_certs[name][cert_valid]["ts"]=expires
+        elseif v_certs[name] and v_certs[name][cert_valid] and v_certs[name][cert_valid]["ts"] < expires then
+            _M.d("c3")
+            a_certs[#a_certs+1]=v_certs[name][cert_valid]["id"]
+            v_certs[name][cert_valid]["id"]=id
+            v_certs[name][cert_valid]["ts"]=expires
+        else
+            _M.d("c4")
+            a_certs[#a_certs+1]=id
+        end
+    end
+    for k,v in pairs(v_certs) do
+        if v[1] and v[0] then
+            a_certs[#a_certs+1]=v[0]["id"]
+            v_certs[k][0]=nil
+        end
+    end
+    for i,v in ipairs(a_certs) do
+    _M.d(v)
+    end
+    return a_certs
+end
+
+function _M.get_unused_keys(db)
+    local q_get_unused_keys = [[
+        SELECT kid as id from (SELECT k.id as kid,c.id as cid from
+ssl_keys k
+LEFT JOIN
+ssl_certs c
+ON c.modulus_sha1 = k.modulus_sha1) AS T WHERE ISNULL(cid)
+    ]]
+    local res,err = _M.db_query(db,q_get_unused_keys)
+        if not res then
+            _M.message_e("ERROR", err)
+    end
+    return res
+end
+
+function _M.archive(type,id,db)
+    --_M.d(type)
+    --_M.de(id)
+    -- archive cert/key with the associated id
+    if type == "cert" then
+        local q_archive_query_p_1 = [[
+            INSERT INTO ssl_certs_archive
+            SELECT *
+            FROM ssl_certs
+            WHERE id = {id} ;
+        ]]
+        local q_archive_query_p_2 = [[
+            DELETE from ssl_certs
+            WHERE id = {id};
+        ]]
+        local res,err = _M.db_query(db,q_archive_query_p_1:gsub("{id}",id))
+        if not res then
+            _M.message_e("ERROR", err)
+        end
+        local res,err = _M.db_query(db,q_archive_query_p_2:gsub("{id}",id))
+        if not res then
+            _M.message_e("ERROR", err)
+        end
+    elseif type == "key" then
+        local q_archive_query_p_1 = [[
+            INSERT INTO ssl_keys_archive
+            SELECT *
+            FROM ssl_keys
+            WHERE id = {id} ;
+        ]]
+        local q_archive_query_p_2 = [[
+            DELETE from ssl_keys
+            WHERE id = {id};
+        ]]
+        local res,err = _M.db_query(db,q_archive_query_p_1:gsub("{id}",id))
+        if not res then
+            _M.message_e("ERROR", err)
+        end
+        local res,err = _M.db_query(db,q_archive_query_p_2:gsub("{id}",id))
+        if not res then
+            _M.message_e("ERROR", err)
         end
     end
 end

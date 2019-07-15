@@ -21,5 +21,8 @@ _M.shell = {
         socket  = "unix:/tmp/sockproc.sock"
     }
 }
+_M.security = {
+    root_auth = "test_auth"
+}
 
 return _M
