@@ -48,6 +48,18 @@ elseif type == "key" then
   end
   out.name = res[1]["name"]:gsub('*','star'):gsub(' ','_')
   out.data = res[1]["raw"]
+elseif type == "fingerprint" then
+  -- this is supposed to return the fingerprint for the domain
+  local query = "SELECT name as name, fingerprint FROM " .. c.mysql.table["cert"] .. " where id = " .. id .. ";"
+  local res, err, errcode, sqlstate = db:query(query)
+  if not res then
+    ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
+    return
+  end
+  if #res == 0 then
+    lib.message_e("ERROR","Resource not found with id: " .. id)
+  end
+  out.data = res[1]["fingerprint"]
 else
   local query = "SELECT name as name, raw FROM " .. c.mysql.table[type] .. " where id = " .. id .. ";"
   local res, err, errcode, sqlstate = db:query(query)
@@ -75,5 +87,7 @@ elseif type == "chain" then
 elseif type == "ic" then
   ngx.header['Content-Type'] = 'application/x-x509-ca-cert'
   ngx.header['Content-Disposition'] = 'attachment; filename="' .. out.name .. '_ic_chain.crt"'
+elseif type == "fingerprint" then
+  ngx.header['Content-Type'] = 'text/plain'
 end
 ngx.print(out.data)
