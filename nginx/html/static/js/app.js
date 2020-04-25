@@ -90,7 +90,8 @@ function modalchange(text){
   }
   else {
     var mtext = document.getElementById("modal-text")
-    var a = document.createElement('p');
+    var a = document.createElement('div');
+    a.style="white-space: pre-line"
     console.log(text)
     var linkText = document.createTextNode(text);
     a.appendChild(linkText)

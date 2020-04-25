@@ -83,7 +83,7 @@ function _M.db()
 end
 -- End setup of common libs
 
-
+-- a simple function to allow for output with or without HTML
 function _M.get_body()
     ngx.req.read_body()
     local body = ngx.req.get_body_data()
@@ -92,34 +92,63 @@ function _M.get_body()
         local f = assert(io.open(tmp_file, "rb"))
         body = f:read("*all")
         f:close()
-    end 
+    end
     if body == nil or body == "" then
         _M.message_e("WARN","Request Body Empty :(")
     end
     return body
 end
 
+-- check for multiple BEGIN blocks
+-- to see if there are multiple certs in same file
 function _M.check_for_multi(message)
+    -- That gives us how many substitutions happened
     return select(2, message:gsub("BEGIN", ""))
 end
+
 -- extract certs, keys, csrs from text
 function _M.extract(message)
-    local multi = _M.check_for_multi(message)
+    -- file to be used for further processing
     local fil = _M.file_from_data (message)
 
-    -- if multi cert, there will be more than 1 BEGIN
-    if multi > 1 then
-        _M.d("multi detected")
-        _M.process_multi(fil)
+
+    -- testing for zip before removing empty lines
+    -- if removing empty lines messes with the zip archive
+    -- not using custom mime type as we checking only for zip
+    local cmd = "file -b " .. fil
+    local out, err = _M.run_shell(cmd)
+    if not out then
+        _M.message_e("ERROR","File detection failed: " .. err)
+    end
+
+    if out:find("Zip") then
+        _M.d("zip detected")
+        -- Here we are not going to be adding to the DB
+        -- Using the generic add_to_db function
+        -- Instead, we will upload the cert using multiple
+        -- Curl calls to myself from inside the docker
+        --_M.message_e("ERROR", "Zip processing not implemented")
+        _M.process_zip(fil)
     end
     -- remove empty lines and then find type of file
+    -- this is required because for some reason LetsEncrypt creates certs
+    -- where the first line is blank
     local cmd = "sed -i '/^$/d' " .. fil .. " && file -b -m /etc/nginx/lua/config/magic_privatekey:/usr/share/misc/magic " .. fil
     local out, err = _M.run_shell(cmd)
     if not out then
-        _M.message_e("ERROR","Invalid Key: " .. err)
+        _M.message_e("ERROR","File detection failed: " .. err)
     end
+    _M.d(out)
     if out:find("certificate") then
         _M.d("cert detected")
+        -- if multi cert, there will be more than 1 BEGIN
+        -- We are doing this here as a multi cert will be detected
+        -- as a cert due to mime magic checking the first line only
+        local multi = _M.check_for_multi(message)
+        if multi > 1 then
+            _M.d("multi detected")
+            _M.process_multi(fil)
+        end
         local certs = {_M.get_cert_details(message,fil)}
         for i,v in ipairs(certs) do
             _M.add_to_db("cert",v)
@@ -130,19 +159,8 @@ function _M.extract(message)
         for i, v in ipairs(keys) do
             _M.add_to_db("key",v)
         end
-    elseif out:find("Zip") then
-        _M.d("zip detected")
-        -- Here we are not going to be adding to the DB
-        -- Using the generic add_to_db function
-        -- Instead, we will upload the cert using multiple
-        -- Curl calls to myself from inside the docker
-        --_M.message_e("ERROR", "Zip processing not implemented")
-        _M.process_zip(fil)
     else
-        _M.d("===")
-        _M.d(message)
-        _M.d("===")
-        _M.message_e("ERROR", "No Cert or key found")
+        _M.message_e("ERROR", "No Cert, Key or zip found")
     end
 end
 
