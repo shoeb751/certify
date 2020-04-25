@@ -5,7 +5,7 @@ local _M = {}
 -- Adding Debug functionality
 _M.debug = {}
 
-function _M.debug.dump_vars (var)
+function _M.debug.dump_vars(var)
     local udpsock = ngx.socket.udp()
     local ok, err = udpsock:setpeername("192.168.1.144", 9000)
     if type(var) == "string" or type(var) == "number" then
@@ -38,7 +38,7 @@ end
 
 local d = _M.debug.dump_vars
 _M.d = d
-function _M.de (arg)
+function _M.de(arg)
     d(arg)
     ngx.exit(200)
 end
@@ -46,7 +46,7 @@ end
 local de = _M.de
 
 -- print  message and exit
-function _M.message_e (level, message)
+function _M.message_e(level, message)
     local level = level or "INFO"
     if not message then
         message = debug.traceback()
@@ -62,7 +62,7 @@ end
 
 _M.shell = require("shell")
 
-function _M.db ()
+function _M.db()
     local mysql = require("mysql")
     local db, err = mysql:new()
     if not db then
@@ -84,7 +84,7 @@ end
 -- End setup of common libs
 
 
-function _M.get_body ()
+function _M.get_body()
     ngx.req.read_body()
     local body = ngx.req.get_body_data()
     if body == nil then
@@ -99,11 +99,11 @@ function _M.get_body ()
     return body
 end
 
-function _M.check_for_multi (message)
+function _M.check_for_multi(message)
     return select(2, message:gsub("BEGIN", ""))
 end
 -- extract certs, keys, csrs from text
-function _M.extract (message)
+function _M.extract(message)
     local multi = _M.check_for_multi(message)
     local fil = _M.file_from_data (message)
 
@@ -146,7 +146,7 @@ function _M.extract (message)
     end
 end
 
-function _M.process_zip (f_name)
+function _M.process_zip(f_name)
     local cmd = [[
         tmp_dir=$(mktemp -d); \
         unzip -q -d $tmp_dir %s && \
@@ -162,7 +162,7 @@ function _M.process_zip (f_name)
     _M.message_e("INFO",out)
 end
 
-function _M.process_multi (f_name)
+function _M.process_multi(f_name)
     -- Three things are being done here
     -- 1) Split multi cert into a single one
     -- 2) Remove empty lines from file
@@ -208,7 +208,7 @@ function _M.process_multi (f_name)
     _M.message_e("INFO",out)
 end
 
-function _M.run_shell (cmd)
+function _M.run_shell(cmd)
     local status, out, err = _M.shell.execute(cmd, c.shell.args)
     if not err then
         return out
@@ -217,7 +217,7 @@ function _M.run_shell (cmd)
     end
 end
 
-function _M.sanitize (obj)
+function _M.sanitize(obj)
     n_obj = {}
     if type(obj) == "string" then
         return obj:gsub("%s+$",""):gsub("^%s+",""):gsub("'","''")
@@ -229,7 +229,7 @@ function _M.sanitize (obj)
 end
 
 
-function _M.get_key_details (data,fil)
+function _M.get_key_details(data,fil)
     local key = {}
     key.raw = data
     local cmd = "openssl rsa -check -in " .. fil .. " -noout -text | grep -E 'Private|RSA'"
@@ -259,7 +259,7 @@ function _M.get_key_details (data,fil)
     return _M.sanitize(key)
 end
 
-function _M.get_cert_details (crt, fil)
+function _M.get_cert_details(crt, fil)
     local cert = {}
     cert.raw = crt
     local cmd = "openssl x509 -noout -subject -issuer -fingerprint -enddate -in " .. fil
@@ -289,7 +289,7 @@ function _M.get_cert_details (crt, fil)
     return _M.sanitize(cert)
 end
 
-function _M.file_from_data (data)
+function _M.file_from_data(data)
     local fil = "/tmp/luatmp/" .. ngx.time() .. ".dat"
     local f,err = io.open(fil,"w")
     f:write(data)
@@ -302,7 +302,7 @@ function _M.file_from_data (data)
     return fil
 end
 
-function _M.db_query (db_instance, query)
+function _M.db_query(db_instance, query)
     local res, err, errcode, sqlstate = db_instance:query(query)
     if not res then
         ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
@@ -311,7 +311,7 @@ function _M.db_query (db_instance, query)
     return res
 end
 
-function _M.get_id_from_name (name,exit)
+function _M.get_id_from_name(name,exit)
     -- this is one or two additional DB calls
     -- so that I do not have to refactor functions
     -- to account for the name
@@ -344,7 +344,7 @@ function _M.root_cert_override(v)
     end
 end
 
-function _M.add_to_db (type,obj)
+function _M.add_to_db(type,obj)
     -- Adding acheck to uplad a root cert
     if type == 'cert' then
         local ok,err = _M.root_cert_override(obj)
@@ -422,7 +422,7 @@ function _M.add_to_db (type,obj)
 
 end
 
-function _M.create_cert_chain (id,db,chain)
+function _M.create_cert_chain(id,db,chain)
     -- Chain will contain the number of entries
     -- and should not be used while calling the function
     -- it is only for the purpose of recusrion
