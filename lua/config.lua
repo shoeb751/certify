@@ -25,4 +25,9 @@ _M.security = {
     root_auth = "test_auth"
 }
 
+_M.log = {
+    driver = "udp",
+    host = "127.0.0.1",
+    port = 5555
+}
 return _M

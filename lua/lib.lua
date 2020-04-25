@@ -6,19 +6,34 @@ local _M = {}
 _M.debug = {}
 
 function _M.debug.dump_vars (var)
+    local udpsock = ngx.socket.udp()
+    local ok, err = udpsock:setpeername("192.168.1.144", 9000)
     if type(var) == "string" or type(var) == "number" then
         ngx.say(var)
+        local ok, err = udpsock:send(var)
+        local ok, err = udpsock:send("\n")
     elseif type(var) == "table" then
         for key,value in pairs(var) do
             ngx.say(_M.debug.dump_vars(key))
             ngx.say(":")
             ngx.say(_M.debug.dump_vars(value))
+            local ok, err = udpsock:send(_M.debug.dump_vars(key))
+            local ok, err = udpsock:send("\n")
+            local ok, err = udpsock:send(":")
+            local ok, err = udpsock:send("\n")
+            local ok, err = udpsock:send(_M.debug.dump_vars(value))
+            local ok, err = udpsock:send("\n")
         end
     elseif type(var) == "nil"  then
         ngx.say(var)
+        local ok, err = udpsock:send(var)
+        local ok, err = udpsock:send("\n")
     else
         ngx.say(type(var) .. "Not being used for debug")
+        local ok, err = udpsock:send(type(var) .. "Not being used for debug")
+        local ok, err = udpsock:send("\n")
     end
+    local ok, err = udpsock:close()
 end
 
 local d = _M.debug.dump_vars
@@ -37,7 +52,7 @@ function _M.message_e (level, message)
         message = debug.traceback()
     end
     local message = message or "No message supplied"
-    ngx.say(level .. ": " .. message)
+    _M.d(level .. ": " .. message)
     ngx.exit(200)
 end
 -- End debug funtionality
@@ -98,12 +113,11 @@ function _M.extract (message)
         _M.process_multi(fil)
     end
     -- remove empty lines and then find type of file
-    local cmd = "sed -i '/^$/d' " .. fil .. "&& file -b -m /etc/nginx/lua/config/magic_privatekey -m /usr/share/misc/magic " .. fil
+    local cmd = "sed -i '/^$/d' " .. fil .. " && file -b -m /etc/nginx/lua/config/magic_privatekey:/usr/share/misc/magic " .. fil
     local out, err = _M.run_shell(cmd)
     if not out then
         _M.message_e("ERROR","Invalid Key: " .. err)
     end
-
     if out:find("certificate") then
         _M.d("cert detected")
         local certs = {_M.get_cert_details(message,fil)}
@@ -227,7 +241,7 @@ function _M.get_key_details (data,fil)
     if not k:find("RSA key ok") then
         _M.message_e("ERROR","invalid key or format: " .. k)
     else
-        ngx.say("key OK")
+        _M.d("key OK")
     end
     local cmd = "openssl rsa -in " .. fil .. " 2>/dev/null"
     local out, err = _M.run_shell(cmd)
@@ -280,10 +294,10 @@ function _M.file_from_data (data)
     local f,err = io.open(fil,"w")
     f:write(data)
     if not f then
-        ngx.say(err)
+        _M.d(err)
     else
         f:close()
-        ngx.say("Done uploading file")
+        _M.d("Done uploading file")
     end
     return fil
 end
@@ -358,7 +372,7 @@ function _M.add_to_db (type,obj)
         return
     end
     if tonumber(res[1]["count"]) ~= 0 then
-        ngx.say (type .. " already exists")
+        _M.d (type .. " already exists")
     else
         if not obj.name then
             obj.name = "NA"
@@ -403,7 +417,7 @@ function _M.add_to_db (type,obj)
             ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
             return
         end
-        ngx.say(type .. " added to library")
+        _M.d(type .. " added to library")
     end
 
 end
