@@ -61,6 +61,12 @@ local function log_print_fn ( ... )
     print(logline)
 end
 
+local function log_ngxlog_fn ( ... )
+    -- takes ... as input
+    local logline = table.concat({...}, ' ')
+    print(logline)
+end
+
 local function log_function(t,k)
     return function ( ... )
         local f = log_generic_implement(t.logger_fn) (k,...) end

@@ -3,6 +3,7 @@ local l = require("lib")
 local log = require "logger"
 log.set_log_level("DEBUG")
 
+log("Hello there")
 local db = l.db()
 local query = [[
   SELECT  c.id, c.name, c.fingerprint, {ISSUER} c.expires, NOT ISNULL(k.raw) as key_exists
