@@ -2,12 +2,11 @@ version: '3'
 services:
   web:
     build: .
-    ports:
-    - "7000:80"
     volumes:
     - "./nginx/conf.d:/etc/nginx/conf.d"
     - "./nginx/html:/var/www/html"
     - "./lua:/etc/nginx/lua"
+    network_mode: "host"
   db:
     image: mysql
     command: --default-authentication-plugin=mysql_native_password

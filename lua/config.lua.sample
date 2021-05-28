@@ -1,5 +1,11 @@
 _M = {}
 
+-- NOTE: the below configs allow for running local instance
+--       of certify with mysql on the same node.
+--       This is desirable for testing, but for for production
+--       deployment. You may copy this file as is to config.lua
+--       to get started
+
 _M.mysql = {
     auth = {
         host            = "db",
