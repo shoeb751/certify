@@ -1,5 +1,7 @@
 #! /usr/bin/env luajit
 local l = require("lib")
+local log = require "logger"
+log.set_log_level("DEBUG")
 
 local db = l.db()
 local query = [[
