@@ -45,23 +45,24 @@ if ngx.var.arg_concise then
 end
 if ngx.var.arg_name and ngx.var.arg_name ~= "" then
     local name = ngx.var.arg_name
-    log.debug("List",name)
+    log.debug("List", name)
     local cond = "WHERE c.name LIKE '%%" .. name .. "%%'"
     query = query:gsub("{NAME_COND}", cond)
 else
     query = query:gsub("{NAME_COND}", "")
 end
 
-local res, err = dblib.query(db,query)
+local res, err = dblib.query(db, query)
 if not res then
-    response.exit(500,err)
+    log.warn("ListDB", err)
+    response.exit(500, err)
 end
 
-log.debug("Listed",#res)
+log.debug("Listed", #res)
 ngx.header['Content-Type'] = 'application/json'
 local cjson = require("cjson")
 if #res == 0 then
-    response.exit(404,"[]")
+    response.exit(404, "[]")
 else
     response.send(cjson.encode(res))
 end
