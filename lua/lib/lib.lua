@@ -49,25 +49,8 @@ end
 
 _M.shell = require("shell")
 
-function _M.db()
-    local mysql = require("mysql")
-    local db, err = mysql:new()
-    if not db then
-        ngx.say("failed to instantiate mysql: ", err)
-        return
-    end
-
-    db:set_timeout(1000) -- 1 sec
-    local ok, err, errcode, sqlstate = db:connect (c.mysql.auth)
-    if not ok then
-        de({ok,err,errcode,sqlstate})
-        local error_message = "failed to connect: " .. err .. ": " .. errcode .. " " .. sqlstate
-        de(error_message)
-        return nil, error_message
-    else
-        return db
-    end
-end
+local dblib = require "certify.db"
+_M.db = dblib.get_connection
 -- End setup of common libs
 
 -- a simple function to allow for output with or without HTML

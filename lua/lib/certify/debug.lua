@@ -18,7 +18,16 @@ local function dump(var)
         log.debug(cjson.encode(var))
     end
 end
+local d = dump
+
+-- dump and exit
+local function de(line)
+    d(line)
+    ngx.exit(200)
+end
 
 local debug = {}
 debug.dump = dump
+debug.d = d
+debug.de = de
 return debug

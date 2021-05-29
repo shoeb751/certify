@@ -3,7 +3,8 @@ local l = require("lib")
 local log = require "certify.log"
 local debug = require "certify.debug"
 
-local db = l.db()
+local dblib = require "certify.db"
+local db = dblib.get_connection()
 local query = [[
   SELECT  c.id, c.name, c.fingerprint, {ISSUER} c.expires, NOT ISNULL(k.raw) as key_exists
   FROM ssl_certs c
@@ -51,11 +52,7 @@ ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
 return
 end
 
-debug.dump(res)
-debug.dump(10)
-debug.dump("hello")
-debug.dump(nil)
-debug.dump(function () return nil end)
+log.debug("Listed " .. #res .. " lines")
 ngx.header['Content-Type']= 'application/json'
 local cjson = require("cjson")
 ngx.say(cjson.encode(res))
