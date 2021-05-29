@@ -2,6 +2,7 @@
 local l = require("lib")
 local log = require "logger"
 log.set_log_level("DEBUG")
+log.logger_fn=log.loggers.log_nsqlog_fn
 
 log("Hello there")
 local db = l.db()
