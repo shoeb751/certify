@@ -1,11 +1,10 @@
 #! /usr/bin/env luajit
 
-local l = require("lib")
 local log = require "certify.log"
 local debug = require "certify.debug"
 local response = require "certify.res"
-
 local dblib = require "certify.db"
+
 local db = dblib.get_connection()
 local query = [[
   SELECT  c.id, c.name, c.fingerprint, {ISSUER} c.expires, NOT ISNULL(k.raw) as key_exists

@@ -416,7 +416,7 @@ function _M.create_cert_chain(id,db,chain)
     -- it is only for the purpose of recusrion
     if not chain then
         local chain = {}
-        query = "SELECT name, issuer, raw from ssl_certs WHERE id = " .. id ..";"
+        local query = "SELECT name, issuer, raw from ssl_certs WHERE id = " .. id ..";"
         local res, err, errcode, sqlstate = db:query(query)
         if not res then
         ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
@@ -429,9 +429,9 @@ function _M.create_cert_chain(id,db,chain)
             return _M.create_cert_chain(id,db,chain)
         end
     else
-        subject = chain[#chain]["issuer"]
-        sub_sanitized = subject:gsub("'","''")
-        query = "SELECT issuer, raw FROM ssl_certs WHERE subject = '" .. sub_sanitized .. "' ORDER BY expires DESC LIMIT 1;"
+        local subject = chain[#chain]["issuer"]
+        local sub_sanitized = subject:gsub("'","''")
+        local query = "SELECT issuer, raw FROM ssl_certs WHERE subject = '" .. sub_sanitized .. "' ORDER BY expires DESC LIMIT 1;"
         local res, err, errcode, sqlstate = db:query(query)
         if not res then
         ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
