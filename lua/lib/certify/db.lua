@@ -23,6 +23,18 @@ local function get_connection()
     end
 end
 
+local function query(dbconn,query)
+    local res, err, errcode, sqlstate = dbconn:query(query)
+    if not res then
+        local cjson = require "cjson"
+        return nil, cjson.encode({err=err,errcode=errcode,sqlstate=sqlstate})
+    else
+        return res
+    end
+end
+
+
 local db = {}
 db.get_connection = get_connection
+db.query = query
 return db
