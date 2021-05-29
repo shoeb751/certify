@@ -2,6 +2,7 @@
 
 local lib = require("lib")
 local c = require("config")
+local log = require "certify.log"
 
 -- creating objects that will be required later
 local db = lib.db()

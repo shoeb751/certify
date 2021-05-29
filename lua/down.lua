@@ -2,6 +2,7 @@
 
 local lib = require("lib")
 local c = require("config")
+local log = require "certify.log"
 
 -- default type is cert, so set that if not specified
 local type = ngx.var.arg_type or "cert"

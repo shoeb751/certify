@@ -49,7 +49,7 @@ local function log_generic_implement(logger_fn)
         for i, v in ipairs(logtable) do
             logtable[i] = string.gsub(tostring(v), '\n', ' ')
         end
-        logger_fn(now, ngx.var.request_id, table.unpack(logtable))
+        logger_fn(now, ngx.ctx.request_id, table.unpack(logtable))
     end
 end
 
@@ -104,7 +104,8 @@ local log = {
     end,
     log_enabled = log_enabled,
     logger_fn = log_print_fn,
-    loggers = loggers
+    loggers = loggers,
+    init = false
 }
 setmetatable(log, log_mt)
 

@@ -1,10 +1,8 @@
 #! /usr/bin/env luajit
 local l = require("lib")
-local log = require "logger"
-log.set_log_level("DEBUG")
-log.logger_fn=log.loggers.log_nsqlog_fn
+local log = require "certify.log"
+local debug = require "certify.debug"
 
-log("Hello there")
 local db = l.db()
 local query = [[
   SELECT  c.id, c.name, c.fingerprint, {ISSUER} c.expires, NOT ISNULL(k.raw) as key_exists
@@ -52,6 +50,12 @@ if not res then
 ngx.say("bad result: ", err, ": ", errcode, ": ", sqlstate, ".")
 return
 end
+
+debug.dump(res)
+debug.dump(10)
+debug.dump("hello")
+debug.dump(nil)
+debug.dump(function () return nil end)
 ngx.header['Content-Type']= 'application/json'
 local cjson = require("cjson")
 ngx.say(cjson.encode(res))

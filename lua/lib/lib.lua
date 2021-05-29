@@ -1,4 +1,6 @@
 local c = require("config")
+local log = require "certify.log"
+local cdebug = require "certify.debug"
 
 local _M = {}
 
@@ -6,34 +8,19 @@ local _M = {}
 _M.debug = {}
 
 function _M.debug.dump_vars(var)
-    local udpsock = ngx.socket.udp()
-    local ok, err = udpsock:setpeername("192.168.1.144", 9000)
     if type(var) == "string" or type(var) == "number" then
         ngx.say(var)
-        local ok, err = udpsock:send(var)
-        local ok, err = udpsock:send("\n")
     elseif type(var) == "table" then
         for key,value in pairs(var) do
             ngx.say(_M.debug.dump_vars(key))
             ngx.say(":")
             ngx.say(_M.debug.dump_vars(value))
-            local ok, err = udpsock:send(_M.debug.dump_vars(key))
-            local ok, err = udpsock:send("\n")
-            local ok, err = udpsock:send(":")
-            local ok, err = udpsock:send("\n")
-            local ok, err = udpsock:send(_M.debug.dump_vars(value))
-            local ok, err = udpsock:send("\n")
         end
     elseif type(var) == "nil"  then
         ngx.say(var)
-        local ok, err = udpsock:send(var)
-        local ok, err = udpsock:send("\n")
     else
         ngx.say(type(var) .. "Not being used for debug")
-        local ok, err = udpsock:send(type(var) .. "Not being used for debug")
-        local ok, err = udpsock:send("\n")
     end
-    local ok, err = udpsock:close()
 end
 
 local d = _M.debug.dump_vars
