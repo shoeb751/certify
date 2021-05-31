@@ -5,7 +5,11 @@ local debug = require "certify.debug"
 local response = require "certify.res"
 local dblib = require "certify.db"
 
-local db = dblib.get_connection()
+local db, err = dblib.get_connection()
+if not db then
+    log.warn("ListDBConnect", err)
+    response.exit(500, err)
+end
 local query = [[
   SELECT  c.id, c.name, c.fingerprint, {ISSUER} c.expires, NOT ISNULL(k.raw) as key_exists
   FROM ssl_certs c
@@ -65,3 +69,5 @@ if #res == 0 then
 else
     response.send(cjson.encode(res))
 end
+-- TODO: Make code more readable
+--       Perhaps seperate the query generation explaining what it does

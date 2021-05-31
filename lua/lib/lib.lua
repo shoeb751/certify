@@ -7,7 +7,7 @@ local _M = {}
 -- Adding Debug functionality
 _M.debug = {}
 
-function _M.debug.dump_vars(var)
+function _M.debug.dump_vars(var) -- moved to certify.debug
     if type(var) == "string" or type(var) == "number" then
         ngx.say(var)
     elseif type(var) == "table" then
@@ -25,7 +25,7 @@ end
 
 local d = _M.debug.dump_vars
 _M.d = d
-function _M.de(arg)
+function _M.de(arg) -- moved to certify.debug
     d(arg)
     ngx.exit(200)
 end
@@ -47,14 +47,14 @@ end
 -- Setup common libs that can be used at multiple places:
 -- Need to decide if these things can be moved to init_by_lua
 
-_M.shell = require("shell")
+_M.shell = require("shell") -- moved to certify.shell
 
-local dblib = require "certify.db"
+local dblib = require "certify.db" 
 _M.db = dblib.get_connection
 -- End setup of common libs
 
 -- a simple function to allow for output with or without HTML
-function _M.get_body()
+function _M.get_body() -- moved to certify.request
     ngx.req.read_body()
     local body = ngx.req.get_body_data()
     if body == nil then
@@ -278,6 +278,7 @@ function _M.get_cert_details(crt, fil)
 end
 
 function _M.file_from_data(data)
+    -- cleanup needs to be performed on this file
     local fil = "/tmp/luatmp/" .. ngx.time() .. ".dat"
     local f,err = io.open(fil,"w")
     f:write(data)

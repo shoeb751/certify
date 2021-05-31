@@ -49,3 +49,4 @@ for i,v in ipairs(keys) do
     lib.archive('key',v["id"],db)
 end
 -- If everything goes well, all cleanup is complete
+-- TODO: Make this cleaner and more understandable

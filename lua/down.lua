@@ -23,7 +23,12 @@ if not id then
     response.exit(400, "ID could not be found, check dn or specify id")
 end
 
-local db = dblib.get_connection()
+local db, err = dblib.get_connection()
+if not db then
+    log.warn("DownDBConnect", err)
+    response.exit(500, err)
+end
+
 local out = {}
 
 -- right now, we generate the chain on demand. This can be cached if required in
@@ -119,3 +124,10 @@ end
 
 -- give the actual data in the body of the response
 response.send(out.data)
+
+-- TODO: Seperate the various calls into a generic process that would
+--       1) Generate the query
+--       2) Do Post Processing based on requirements
+--       This will allow in future to add other types of cert downloads
+--       without adding to the mess of if else statements here.
+--       2 lib functions still in use in this file which either need moving, or replacing
