@@ -250,7 +250,7 @@ end
 function _M.get_cert_details(crt, fil)
     local cert = {}
     cert.raw = crt
-    local cmd = "openssl x509 -noout -subject -issuer -fingerprint -enddate -in " .. fil
+    local cmd = "openssl x509 -noout -subject -issuer -fingerprint -enddate -nameopt compat -in " .. fil
     local out, err = _M.run_shell(cmd)
     if not out then
         _M.message_e("ERROR","Invalid Certificate: " .. err)

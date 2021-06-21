@@ -15,6 +15,9 @@ RUN mkdir -p /opt/nsq && cd /opt/nsq && \
 FROM openresty/openresty:alpine
 COPY --from=build /opt/build/sockproc-master/sockproc /bin/
 COPY --from=build /opt/nsq/nsq-1.2.0.linux-amd64.go1.12.9/bin/nsqd /bin/
+COPY ./lua /etc/nginx/lua
+COPY ./nginx/html /var/www/html
+COPY ./nginx/conf.d /etc/nginx/conf.d
 ADD ./misc/start.sh /bin/start.sh
 RUN apk update && apk add --no-cache openssl coreutils file curl && chmod 775 /bin/start.sh
 CMD ["/bin/start.sh"]
