@@ -313,7 +313,7 @@ function _M.get_id_from_name(name,exit)
     if exit then return res[1] and res[1]["id"] end
     -- if no results for specific match, try wildcard match
     if #res == 0 then
-        return _M.get_id_from_name("*." .. name:gsub('^%w+%.',''),true)
+        return _M.get_id_from_name("*." .. name:gsub('^[%w-]+%.',''),true)
     else
         return res[1] and res[1]["id"]
     end
