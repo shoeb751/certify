@@ -1,3 +1,7 @@
+> [!WARNING]  
+> This Repo is no longer Supported as I am no longer using this tool. It was a fun project for the time.
+> Deploy and use at your own risk.
+
 ## Certify
 
 This is a tool that was build with the vision of having better SSL certificate management for an organisation that
